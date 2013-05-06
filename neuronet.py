@@ -119,23 +119,21 @@ class neuronet():
     def teachGenetic(self):
         s = self.state
         oldGen = []
-        for i in range(0, 20):
+        for i in range(0, 10):
             oldGen.append(copy(s))
-        for i in range(0, 20):
+        for i in range(0, 10):
             oldGen[i].mutate()
 
         newGen = []
 
         while True:
-            c = copy(oldGen[0])
-            newGen.append(c)
             for i in oldGen:
                 c = copy(i)
                 c.mutate()
                 c.buildError(self.__inputCollection, self.__scaleCollection)
                 newGen.append(c)
 
-            for i in range(0, 20):
+            for i in range(0, 10):
                 c = oldGen[randint(0, len(oldGen) - 1)].merge(oldGen[randint(0, len(oldGen) - 1)])
                 c[0].buildError(self.__inputCollection, self.__scaleCollection)
                 c[1].buildError(self.__inputCollection, self.__scaleCollection)
@@ -143,7 +141,7 @@ class neuronet():
 
             newGen += oldGen
             newGen.sort()
-            for i in range(0, 20):
+            for i in range(0, 10):
                 oldGen[i] = newGen[i]
 
             newGen = []

@@ -22,7 +22,7 @@ class neuron():
         self.countInput = count
         self.weights = [None] * count
         for i in range(0, len(self.weights)):
-            self.weights[i] = random.uniform(-2.5, 2.5)
+            self.weights[i] = random.uniform(-1, 1)
 
 #   Сумма произведений входов на веса синапсов
     def __getSum(self, inputs):
@@ -41,7 +41,7 @@ class neuron():
 #   Мутация
     def mutate(self):
         for i in range(0, len(self.weights)):
-            self.weights[i] += random.uniform(-10, 10)
+            self.weights[i] += random.uniform(-0.25, 0.25)
 
 #   Кроссовер
     def mergeLeft(self, other):

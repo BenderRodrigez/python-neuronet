@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 import pylab
 
 if __name__ == '__main__':
-    n = neuronet(0.1, 4, 100, 15, 0.003, functionText="3 * x + math.log(x)")
-    n.teach()
+    n = neuronet(0.1, 4, 100, 15, 0.01, functionText="3 * x + math.log(x)")
+    n.teachGenetic()
     x = []
     y = []
     y1 = []

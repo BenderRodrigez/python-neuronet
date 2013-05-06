@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function
 from neuron import neuron
+from state import State
+from random import randint
+from copy import copy
 import math
 
 
@@ -21,10 +24,6 @@ class neuronet():
     minDeltaError = 0.0000
 #    Максимальное количество эпох
     maxEpoch = 1000000
-#	 Нейроны первого слоя
-    __layer1 = []
-#	 Нейроны второго слоя
-    __layer2 = []
 #	 Входные данные с образцами обучения
     __teachCollection = []
 #	 Входные данные со значениями
@@ -33,6 +32,8 @@ class neuronet():
     __scaleCollection = []
 #	 Де-масштабированные данные
     __reverseScaleCollection = []
+#    Текущее состояние нейронов
+    state = State()
 
     def __init__(self, a, b, countTeachElement,
                  countNeurons, sumError, functionText="math.sin(x)"):
@@ -40,8 +41,8 @@ class neuronet():
         self.countNeurons = countNeurons
         self.maxError = sumError
         for i in range(0, countNeurons):
-            self.__layer1.append(neuron(1))
-        self.__layer2.append(neuron(countNeurons))
+            self.state.layer1.append(neuron(1))
+        self.state.layer2.append(neuron(countNeurons))
 
         self.__functionText = functionText
         self.__inputCollection = self.__buildInputCollection(a, b, countTeachElement)
@@ -94,9 +95,9 @@ class neuronet():
             y[:] = []
             for k in range(0, self.countTeachElement):
                 y1 = []
-                for n in self.__layer1:
+                for n in self.state.layer1:
                     y1.append(n.activate([self.__inputCollection[k]]))
-                y.append(self.__layer2[0].activate(y1))
+                y.append(self.state.layer2[0].activate(y1))
 
                 self.backPropagate(k, y1, y[k])
 
@@ -114,28 +115,60 @@ class neuronet():
 #                return ResultTeach(False, "Не обучена, Эффективность\
 #                                           обучения ниже необходимой")
 
+    # Генетический алгоритм
+    def teachGenetic(self):
+        s = self.state
+        oldGen = []
+        for i in range(0, 20):
+            oldGen.append(copy(s))
+        for i in range(0, 20):
+            oldGen[i].mutate()
+
+        newGen = []
+
+        while True:
+            c = copy(oldGen[0])
+            newGen.append(c)
+            for i in oldGen:
+                c = copy(i)
+                c.mutate()
+                c.buildError(self.__inputCollection, self.__scaleCollection)
+                newGen.append(c)
+
+            for i in range(0, 20):
+                c = oldGen[randint(0, len(oldGen) - 1)].merge(oldGen[randint(0, len(oldGen) - 1)])
+                c[0].buildError(self.__inputCollection, self.__scaleCollection)
+                c[1].buildError(self.__inputCollection, self.__scaleCollection)
+                newGen += c
+
+            newGen += oldGen
+            newGen.sort()
+            for i in range(0, 20):
+                oldGen[i] = newGen[i]
+
+            newGen = []
+            print(oldGen[0].error)
+            if oldGen[0].error <= self.maxError:
+                self.state = oldGen[0]
+                return [True, "Обучена"]
+
 #   Обратное распространение ошибки
     def backPropagate(self, k, out1, out2):
         delta = out2 * (1 - out2) * (self.__scaleCollection[k] - out2)
-        for i in range(0, self.__layer2[0].countInput):
-            self.__layer2[0].weights[i] += self.__layer2[0].speedTeach *\
+        for i in range(0, self.state.layer2[0].countInput):
+            self.state.layer2[0].weights[i] += self.state.layer2[0].speedTeach *\
                 delta * out1[i]
 
-        for j in range(0, len(self.__layer1)):
-            for i in range(0, self.__layer1[j].countInput):
-                self.__layer1[j].weights[i] += self.__layer1[j].speedTeach *\
-                    delta * self.__layer2[0].weights[j] *\
+        for j in range(0, len(self.state.layer1)):
+            for i in range(0, self.state.layer1[j].countInput):
+                self.state.layer1[j].weights[i] += self.state.layer1[j].speedTeach *\
+                    delta * self.state.layer2[0].weights[j] *\
                     out1[j] * (1 - out1[j]) * \
                     self.__inputCollection[k]
 
 #   Получение аппроксимированного результата для значения
     def getValue(self, x):
-        y1 = []
-        for n in self.__layer1:
-            y1.append(n.activate([x]))
-        tmp = self.__layer2[0].activate(y1)
-        tmp = self.__buildRevScaleCollection(tmp)
-        return tmp
+        return self.__buildRevScaleCollection(self.state.getValue(x))
 
 #   Получение текста функции
     def getFunctionText(self):

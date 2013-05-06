@@ -20,7 +20,9 @@ class neuron():
 
     def __init__(self, count):
         self.countInput = count
-        self.weights = [random.uniform(-2.5, 2.5)] * count
+        self.weights = [None] * count
+        for i in range(0, len(self.weights)):
+            self.weights[i] = random.uniform(-2.5, 2.5)
 
 #   Сумма произведений входов на веса синапсов
     def __getSum(self, inputs):
@@ -31,4 +33,31 @@ class neuron():
 
 #   Активация синапса по сигмоиду
     def activate(self, inputs):
-        return 1 / (1 + math.exp(-self.__getSum(inputs)))
+        try:
+            return 1 / (1 + math.exp(-self.__getSum(inputs)))
+        except:
+            return self.__getSum(inputs)
+
+#   Мутация
+    def mutate(self):
+        for i in range(0, len(self.weights)):
+            self.weights[i] += random.uniform(-10, 10)
+
+#   Кроссовер
+    def mergeLeft(self, other):
+        newNeuron = neuron(1)
+        newNeuron.weights = [None] * len(self.weights)
+        for i in xrange(0,len(self.weights),2):
+            newNeuron.weights[i] = self.weights[i]
+        for i in xrange(1,len(self.weights),2):
+            newNeuron.weights[i] = other.weights[i]
+        return newNeuron
+
+    def mergeRight(self, other):
+        newNeuron = neuron(1)
+        newNeuron.weights = [None] * len(self.weights)
+        for i in xrange(1,len(self.weights),2):
+            newNeuron.weights[i] = self.weights[i]
+        for i in xrange(0,len(self.weights),2):
+            newNeuron.weights[i] = other.weights[i]
+        return newNeuron

@@ -41,7 +41,7 @@ class neuron():
 #   Мутация
     def mutate(self):
         for i in range(0, len(self.weights)):
-            self.weights[i] += random.uniform(-0.25, 0.25)
+            self.weights[i] += random.uniform(-0.01, 0.01)
 
 #   Кроссовер
     def mergeLeft(self, other):

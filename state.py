@@ -52,6 +52,9 @@ class State(object):
             newState[1].layer2[i] = self.layer2[i].mergeRight(other.layer2[i])
         return newState
 
+    def __repr__(self):
+        return "%s" % (self.error)
+
     def __cmp__(self, other):
         if self.error < other.error:
             return -1  
@@ -59,3 +62,6 @@ class State(object):
             return 1
         else: 
             return 0 
+    
+    def __lt__(self, other):
+        return self.error < other.error

@@ -3,6 +3,9 @@
 from __future__ import unicode_literals, print_function
 import random
 import math
+import sys
+if sys.version_info < (3,):
+    range = xrange
 
 
 class neuron():
@@ -47,17 +50,17 @@ class neuron():
     def mergeLeft(self, other):
         newNeuron = neuron(1)
         newNeuron.weights = [None] * len(self.weights)
-        for i in xrange(0,len(self.weights),2):
+        for i in range(0,len(self.weights),2):
             newNeuron.weights[i] = self.weights[i]
-        for i in xrange(1,len(self.weights),2):
+        for i in range(1,len(self.weights),2):
             newNeuron.weights[i] = other.weights[i]
         return newNeuron
 
     def mergeRight(self, other):
         newNeuron = neuron(1)
         newNeuron.weights = [None] * len(self.weights)
-        for i in xrange(1,len(self.weights),2):
+        for i in range(1,len(self.weights),2):
             newNeuron.weights[i] = self.weights[i]
-        for i in xrange(0,len(self.weights),2):
+        for i in range(0,len(self.weights),2):
             newNeuron.weights[i] = other.weights[i]
         return newNeuron

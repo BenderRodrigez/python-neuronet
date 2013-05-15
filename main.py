@@ -2,12 +2,13 @@
 # -*- coding: utf-8 -*-
 from __future__ import unicode_literals, print_function
 from neuronet import neuronet
+from neuronetCuda import neuronetCuda
 import matplotlib.pyplot as plt
 import pylab
 
 if __name__ == '__main__':
-    n = neuronet(0.1, 4, 100, 15, 0.01, functionText="3 * x + math.log(x)")
-    n.teachGenetic()
+    n = neuronetCuda(0.1, 4, 100, 15, 0.0001, functionText="3 * x + math.log(x)")
+    n.teach()
     x = []
     y = []
     y1 = []

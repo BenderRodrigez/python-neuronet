@@ -55,9 +55,24 @@ class neuronetCuda():
         self.__scaleCollection = self.__buildScaleCollection(self.__teachCollection)
 
         self.__function = ElementwiseKernel(
-            str("float *x, float y, float *z"),
+            str("double *x, double y, double *z"),
             str("z[i] = 1 / (1 + exp(-(y * x[i])))"),
-            str("linear_combination"))
+            str("linear_multiply"))
+
+        self.__functionMultiply = ElementwiseKernel(
+            str("double *x, double *y, double *z"),
+            str("z[i] = x[i] * y[i]"),
+            str("linear_multiply"))
+
+        self.__backPropagateTop = ElementwiseKernel(
+            str("double *x, double *y, double z"),
+            str("x[i] += 0.5 * z * y[i]"),
+            str("linear_backPropagateTop"))
+
+        self.__backPropagateBot = ElementwiseKernel(
+            str("double *x, double *y, double *z, double a, double b"),
+            str("x[i] += 0.5 * a * y[i] * z[i] * (1 - z[i]) * b"),
+            str("linear_backPropagateBot"))
 
 #   Аппроксимируемая функция
     def function(self, x):
@@ -117,22 +132,15 @@ class neuronetCuda():
             elif e >= self.maxEpoch:
                 return [False, "Не обучена, \
                 Достугнуто максимальное количество эпох"]
-            elif e > 1 and errors[e-2] < errors[e-1]:
-                return [False, "Не обучена, Эффективность\
-                                          обучения ниже необходимой"]
+            # elif e > 1 and errors[e-2] < errors[e-1]:
+            #     return [False, "Не обучена, Эффективность\
+            #                               обучения ниже необходимой"]
 
 #   Обратное распространение ошибки
     def backPropagate(self, k):
         delta = self.__value2 * (1 - self.__value2) * (self.__scaleCollection[k] - self.__value2)
-        # for i in range(0, self.countNeurons):
-        #     self.__weights2[i] += 0.2 * delta * self.__values[i]
-        self.__weights2 += 0.5 * delta * self.__values
-
-        # for j in range(0, self.countNeurons):
-        #     self.__weights[j] += 0.2 * delta * self.__weights2[j] *\
-        #         self.__values[j] * (1 - self.__values[j]) * self.__inputCollection[k]
-        self.__weights += 0.5 * delta * self.__weights2 *\
-                self.__values * (1 - self.__values) * self.__inputCollection[k]
+        self.__backPropagateTop(self.__weights2, self.__values, delta)
+        self.__backPropagateBot(self.__weights, self.__weights2, self.__values, delta, self.__inputCollection[k])
 
 #   Получение аппроксимированного результата для значения
     def getValue(self, x):
@@ -144,19 +152,9 @@ class neuronetCuda():
         return self.__functionText
 
     def evaluateInput(self, currentInput):
-        # CUDA starts here ======
-        # for i in range(0, self.countNeurons):
-            # self.__values[i] = 1 / (1 + math.exp(-(currentInput * self.__weights[i])))
-        # CUDA ends here ========
         self.__function(self.__weights, currentInput, self.__values)
+        self.__functionMultiply(self.__values, self.__weights2, self.__mid_mult)
 
-        # CUDA starts here ======
-        # for i in range(0, self.countNeurons):
-        #     self.__mid_mult[i] = self.__values[i] * self.__weights2[i]
-        # CUDA ends here ========
-        self.__mid_mult = self.__values * self.__weights2
-
-        # bareValue = self.__getArraySum(c_gpu)
         bareValue = self.__getArraySum(self.__mid_mult)
         try:
             self.__value2 = 1 / (1 + math.exp(-bareValue))

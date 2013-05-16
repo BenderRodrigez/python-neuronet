@@ -21,7 +21,7 @@ class neuronet():
 #    Минимальная ошибка
     maxError = None
 #    Минимальное изменение ошибки
-    minDeltaError = 0.0000
+    minDeltaError = 0.000001
 #    Максимальное количество эпох
     maxEpoch = 1000000
 #	 Входные данные с образцами обучения
@@ -35,15 +35,17 @@ class neuronet():
 #    Текущее состояние нейронов
     state = State()
 
+    errors = []
+
     def __init__(self, a, b, countTeachElement,
-                 countNeurons, sumError, functionText="math.sin(x)"):
+                 countNeurons, sumError, functionText="math.sin(x)", debug=False):
+        self.debug = debug
         self.countTeachElement = countTeachElement
         self.countNeurons = countNeurons
         self.maxError = sumError
         for i in range(0, countNeurons):
             self.state.layer1.append(neuron(1))
         self.state.layer2.append(neuron(countNeurons))
-
         self.__functionText = functionText
         self.__inputCollection = self.__buildInputCollection(a, b, countTeachElement)
         self.__teachCollection = self.__buildTeachCollection(self.__inputCollection)
@@ -86,7 +88,7 @@ class neuronet():
 #   Обучение сети
     def teach(self):
         y = []
-        errors = []
+        self.errors = []
         e = 0
         sumErrorEp = 0
         while True:
@@ -103,19 +105,19 @@ class neuronet():
 
                 sumErrorEp += 0.5 * pow(self.__scaleCollection[k] - y[k], 2)
 
-            print(sumErrorEp)
-            errors.append(sumErrorEp)
+            if self.debug:
+                print(sumErrorEp)
+            self.errors.append(sumErrorEp)
 
             if sumErrorEp <= self.maxError:
                 return [True, "Обучена"]
             elif e >= self.maxEpoch:
                 return [False, "Не обучена, \
                 Достугнуто максимальное количество эпох"]
-#            elif e > 1 and errors[e-2] - errors[e-1] <= self.minDeltaError:
-#                return ResultTeach(False, "Не обучена, Эффективность\
-#                                           обучения ниже необходимой")
+            elif e > 1 and self.errors[e-2] - self.errors[e-1] <= self.minDeltaError:
+                return [False, "Не обучена, Эффективность обучения ниже необходимой: %s"%self.errors[e - 1]]
 
-    # Генетический алгоритм
+#   Генетический алгоритм
     def teachGenetic(self):
         s = self.state
         oldGen = []
@@ -157,8 +159,8 @@ class neuronet():
             self.state.layer2[0].weights[i] += self.state.layer2[0].speedTeach *\
                 delta * out1[i]
 
-        for j in range(0, len(self.state.layer1)):
-            for i in range(0, self.state.layer1[j].countInput):
+        for j in range(0, len(self.state.layer1) - 1):
+            for i in range(0, self.state.layer1[j].countInput - 1):
                 self.state.layer1[j].weights[i] += self.state.layer1[j].speedTeach *\
                     delta * self.state.layer2[0].weights[j] *\
                     out1[j] * (1 - out1[j]) * \

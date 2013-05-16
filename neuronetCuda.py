@@ -9,6 +9,7 @@ from pycuda.compiler import SourceModule
 from pycuda.curandom import rand as curand
 import pycuda.gpuarray as gpuarray
 import math
+import random
 
 
 class neuronetCuda():
@@ -24,7 +25,7 @@ class neuronetCuda():
 #    Минимальная ошибка
     maxError = None
 #    Минимальное изменение ошибки
-    minDeltaError = 0.0000
+    minDeltaError = 0.000001
 #    Максимальное количество эпох
     maxEpoch = 1000000
 #    Входные данные с образцами обучения
@@ -36,16 +37,29 @@ class neuronetCuda():
 #    Де-масштабированные данные
     __reverseScaleCollection = []
 
+    errors = []
+
     def __init__(self, a, b, countTeachElement,
-                 countNeurons, sumError, functionText="math.sin(x)"):
+                 countNeurons, sumError, functionText="math.sin(x)",
+                 weights1 = None, weights2 = None, debug = False):
         self.countTeachElement = countTeachElement
         self.countNeurons = countNeurons
         self.maxError = sumError
+        self.debug = debug
+        self.errors = []
 
         sample = gpuarray.np.random.random(countNeurons)
-        self.__weights = gpuarray.to_gpu(gpuarray.np.random.random(countNeurons))
+        if weights1 is None:
+            self.__weights = gpuarray.to_gpu(np.random.rand(countNeurons) * 2 - 1)
+        else:
+            self.__weights = gpuarray.to_gpu(weights1)
+
         self.__values = gpuarray.to_gpu(gpuarray.np.empty_like(sample))
-        self.__weights2 = gpuarray.to_gpu(gpuarray.np.random.random(countNeurons))
+
+        if weights2 is None:
+            self.__weights2 = gpuarray.to_gpu(np.random.rand(countNeurons) * 2 - 1)
+        else:
+            self.__weights2 = gpuarray.to_gpu(weights2)
         self.__mid_mult = gpuarray.to_gpu(gpuarray.np.empty_like(sample))
         self.__value2 = 0
 
@@ -66,12 +80,12 @@ class neuronetCuda():
 
         self.__backPropagateTop = ElementwiseKernel(
             str("double *x, double *y, double z"),
-            str("x[i] += 0.5 * z * y[i]"),
+            str("x[i] += 0.2 * z * y[i]"),
             str("linear_backPropagateTop"))
 
         self.__backPropagateBot = ElementwiseKernel(
             str("double *x, double *y, double *z, double a, double b"),
-            str("x[i] += 0.5 * a * y[i] * z[i] * (1 - z[i]) * b"),
+            str("x[i] += 0.2 * a * y[i] * z[i] * (1 - z[i]) * b"),
             str("linear_backPropagateBot"))
 
 #   Аппроксимируемая функция
@@ -111,7 +125,7 @@ class neuronetCuda():
 #   Обучение сети
     def teach(self):
         y = []
-        errors = []
+        self.errors = []
         e = 0
         sumErrorEp = 0
         while True:
@@ -124,17 +138,17 @@ class neuronetCuda():
                 self.backPropagate(k)
                 sumErrorEp += 0.5 * pow(self.__scaleCollection[k] - self.__value2, 2)
 
-            print(sumErrorEp)
-            errors.append(sumErrorEp)
+            if self.debug:
+                print(sumErrorEp)
+            self.errors.append(sumErrorEp)
 
             if sumErrorEp <= self.maxError:
                 return [True, "Обучена"]
             elif e >= self.maxEpoch:
                 return [False, "Не обучена, \
                 Достугнуто максимальное количество эпох"]
-            # elif e > 1 and errors[e-2] < errors[e-1]:
-            #     return [False, "Не обучена, Эффективность\
-            #                               обучения ниже необходимой"]
+            elif e > 1 and self.errors[e-2] - self.errors[e-1] <= self.minDeltaError:
+                return [False, "Не обучена, Эффективность обучения ниже необходимой: %s"%self.errors[e - 1]]
 
 #   Обратное распространение ошибки
     def backPropagate(self, k):
